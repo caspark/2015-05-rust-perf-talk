@@ -1,86 +1,59 @@
 <!doctype html>
 <html lang="en">
 
-	<head>
-		<meta charset="utf-8">
+    <head>
+        <meta charset="utf-8">
 
-		<title>2015-05 Rust Performance Talk</title>
+        <title>2015-05 Rust Performance Talk</title>
 
-		<meta name="description" content="Talk on Rust performance">
-		<meta name="author" content="Caspar Krieger">
+        <meta name="description" content="Talk on Rust performance">
+        <meta name="author" content="Caspar Krieger">
 
-		<meta name="apple-mobile-web-app-capable" content="yes" />
-		<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 
-		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui">
 
-		<link rel="stylesheet" href="css/reveal.css">
-		<link rel="stylesheet" href="css/theme/night.css" id="theme">
+        <link rel="stylesheet" href="css/reveal.css">
+        <link rel="stylesheet" href="css/theme/night.css" id="theme">
 
-		<!-- Code syntax highlighting -->
-		<link rel="stylesheet" href="lib/css/zenburn.css">
+        <!-- Code syntax highlighting -->
+        <link rel="stylesheet" href="lib/css/zenburn.css">
 
-		<!-- Printing and PDF exports -->
-		<script>
-			var link = document.createElement( 'link' );
-			link.rel = 'stylesheet';
-			link.type = 'text/css';
-			link.href = window.location.search.match( /print-pdf/gi ) ? 'css/print/pdf.css' : 'css/print/paper.css';
-			document.getElementsByTagName( 'head' )[0].appendChild( link );
-		</script>
+        <!-- Printing and PDF exports -->
+        <script>
+            var link = document.createElement( 'link' );
+            link.rel = 'stylesheet';
+            link.type = 'text/css';
+            link.href = window.location.search.match( /print-pdf/gi ) ? 'css/print/pdf.css' : 'css/print/paper.css';
+            document.getElementsByTagName( 'head' )[0].appendChild( link );
+        </script>
 
-		<!--[if lt IE 9]>
-		<script src="lib/js/html5shiv.js"></script>
-		<![endif]-->
-	</head>
+        <!--[if lt IE 9]>
+        <script src="lib/js/html5shiv.js"></script>
+        <![endif]-->
+    </head>
 
-	<body>
+    <body>
 
-		<div class="reveal markdown">
+        <div class="reveal markdown">
 
-			<!-- Any section element inside of this container is displayed as a slide -->
-			<div class="slides">
-				<section>
-					<h2>From Java to the Metal</h2>
+            <!-- Any section element inside of this container is displayed as a slide -->
+            <div class="slides">
+        <section>
+                    <h2>From Java to the Metal</h2>
           <br>
-					<h4>Pitting Rust against the JVM</h4>
+                    <h4>Pitting Rust against the JVM</h4>
           <br>
-					<p>
-						<small><a href="http://asparck.com">Caspar Krieger</a> / Java Dev @ Atlassian</small>
-					</p>
-				</section>
+                    <p>
+                        <small><a href="http://asparck.com">Caspar Krieger</a> / Java Dev @ Atlassian</small>
+                    </p>
 
-        <!--
-            - Aside: Massive disclaimer: I've written a few thousands lines of Rust code over the last 5 months, but over several small projects on my own.
-            -- That's a great way to learn Rust because you're not tied down by previous decisions
-            --- and you don't have to worry about keeping old projects up to date when Rust introduces breaking changes
-            -- But working on my own without any code review means that I'm probably not writing idiomatic Rust code yet.
-            -- Also, things here might be flat out wrong, but I trust Huon will shout at me when I do say anything incorrect.
+          <aside class="notes">
+            Talking about experiences optimizing Rust code for performance, coming from a Java background.
+                </section>
 
-            - And I ran a study group for a bunch of other people, most of whom solved it in Java (well, some C#, Python, Haskell, Go, Scala & Perl, but mostly Java)
-            -- So what happens when you get a bunch of people using different languages?
-            --- Competition! Everyone wants to prove their language is the best.
-            -- I was unwittingly led down the path of performance optimisations, and thinking about a whole bunch of low level things that I normally don't give a damn about
-
-            - So let me take you on a journey of one such competition, where I tried to optimize the hell out of Rust code.
-            -- Aside from seeing how to find what's slow in Rust code, this is also some "real" code, so those people who are here purely because they're curious in the language should get some feel for the syntax and how it feels to work in it
-
-            [ Walk through the code of my naive solution, give timing output ]
-
-            [ "You don't know what's slow, so let's profile it" - callgrind output; mention trick to get callgrind to resolve Rust library source, and mention need to include debug information into release binaries so we can profile them ]
-
-            [ Point out the heap allocation that's slow; show trick Huon pointed out with fixed size arrays on the stack ]
-
-            [ New profiles, new timing info ]
-
-            [ Modulus slowness isn't really clear; introduce `perf` and perf report - mention it's a sampling profiler ]
-
-            [ Point out the slow modulus comparison based on assembly; extract that out, mention it's a bit embarrasing that Rust doesn't optimise that for us ]
-
-            ** See what other perf gains we can eke out from the Rust code and write it up **
-          -->
-
-				<section>
+        <section>
           <h2>The other side of Rust</h2>
 
           <p>More than a better language for C/C++ devs</p>
@@ -92,7 +65,7 @@
           </aside>
         </section>
 
-				<section>
+        <section>
           <h2>Systems programming for the masses</h2>
 
           <p>For me, C++ is a massive footgun:</p>
@@ -110,12 +83,12 @@
           </aside>
         </section>
 
-				<section>
+        <section>
           <h2>Why even bother as a Java dev?</h2>
 
           <ul>
             <li>Infrastructure needs C-level code (e.g. Apache modules)</li>
-            <li>Fast & easy to distribute cmd line tools</li>
+            <li>Fast &amp; easy to distribute command line tools</li>
             <li>Game development as a hobby</li>
           </ul>
 
@@ -124,13 +97,14 @@
           </aside>
         </section>
 
-				<section>
+        <section>
           <h2>Question</h2>
           <p>How do you get a Java dev to learn a new language like Rust?</p>
 
           <aside class="notes">
-            - Especially when that language is reputed to have a steep learning curve
-            - And the language had only just reached Alpha state
+            - When the language is only just in Alpha state...
+            - And when that language is reputed to have a steep learning curve...
+            - How can I stay motivated?
           </aside>
         </section>
 
@@ -150,13 +124,15 @@
         <section>
           <p>... shit, I've replaced one problem by another</p>
 
+          <p>How do I stay motivated for the coursera course?</p>
+
           <aside class="notes">
             Great, gotten rid of one problem, replaced it with another
             How to stay motivated for the Coursera course?
           </aside>
         </section>
 
-				<section>
+        <section>
           <h2><em>Algorithms study group</em></h2>
 
           <p>"For people who want to brush up on Algorithms"</p>
@@ -177,7 +153,7 @@
           </aside>
         </section>
 
-				<section>
+        <section>
           <h2>Competition!</h2>
 
           <p>Everybody wants to prove their language is the best.</p>
@@ -188,7 +164,7 @@
           </aside>
         </section>
 
-				<section>
+        <section>
           <h2>let's optimize some real Rust</h2>
 
           <aside class="notes">
@@ -199,7 +175,30 @@
           </aside>
         </section>
 
-				<section>
+        <section>
+          <h2>but first, a big disclaimer</h2>
+
+          <h3>My Rust experience level:</h3>
+
+          <ul>
+            <li>4 months, ~4k lines of Rust</li>
+            <li>Code not reviewed</li>
+            <li>I (try to) write Rust like it's Scala</li>
+            <li>Negligible C/C++ experience</li>
+          </ul>
+
+          <p>If Huon hadn't bribed with me a t-shirt, I'd be in the audience.</p>
+
+          <aside class="notes">
+            * Many small projects is great, especially when the language is changing every week
+            * Get to apply new learnings to new code regularly
+            * I'm not an expert. At best, I'm approaching competence!
+            * My code probably isn't idiomatic
+            * I trust Huon will shout at me if I get major things wrong
+          </aside>
+        </section>
+
+        <section>
           <h2>Our problem: seam carving</h2>
 
           <ul>
@@ -208,10 +207,10 @@
           </ul>
         </section>
 
-				<section>
-          <h2>Before & After</h2>
-          <img src="./img/HJoceanSmall.png">         
-          <img src="./img/HJoceanSmallShrunk.png">         
+        <section>
+          <h2>Before &amp; After</h2>
+          <img src="./img/HJoceanSmall.png">
+          <img src="./img/HJoceanSmallShrunk.png">
 
           <aside class="notes">
             * 150 pixel slices removed
@@ -221,10 +220,10 @@
           </aside>
         </section>
 
-				<section>
+        <section>
           <h2>#1 Find pixel energy</h2>
 
-          <img src="./img/HJoceanSmallEnergy-autolevelled.png">         
+          <img src="./img/HJoceanSmallEnergy-autolevelled.png">
           <p><strong>Why?</strong> Energy is how interesting the pixel is.</p>
           <p>Want to avoid removing interesting pixels.</p>
 
@@ -235,15 +234,15 @@
           </aside>
         </section>
 
-				<section>
+        <section>
           <h2>Calculating energy</h2>
 
           <p>Energy of a pixel <strong>p</strong> surrounded by pixels <strong>T</strong>, <strong>L</strong>, <strong>R</strong>, &amp; <strong>B</strong>:
-          
+
           <pre>
               | T |
             L | p | R     energy of pixel p = (T - B) ^ 2 + (L - R) ^ 2
-              | B |       
+              | B |
           </pre>
 
           <p>(The difference in colour of the surrounding pixels, squared.)</p>
@@ -251,16 +250,16 @@
           <p>Special case: pixels on edge of image always have max energy.</p>
 
           <aside class="notes">
-            * Pixels are actually composed of red, green, & blue, so do this calc for each colour component and sum the result.
+            * Pixels are actually composed of red, green, &amp; blue, so do this calc for each colour component and sum the result.
           </aside>
         </section>
 
         <section>
           <pre class="stretch"><code data-trim>
-pub fn calculate_energy(&mut self, width: usize, height: usize, pixels: &amp;[RGB&lt;u8&gt;]) {
+pub fn calculate_energy(&amp;mut self, width: usize, height: usize, pixels: &amp;[RGB&lt;u8&gt;]) {
     let num_pixels = width * height;
     for i in 0..num_pixels {
-        self.energy[i] = if i < width { // first row
+        self.energy[i] = if i &lt; width { // first row
             MAX_PIXEL_ENERGY
         } else if i > width * (height - 1) { // last row
             MAX_PIXEL_ENERGY
@@ -275,7 +274,7 @@ pub fn calculate_energy(&mut self, width: usize, height: usize, pixels: &amp;[RG
                 (x1.r as i32 - x2.r as i32).pow(2) + (x1.g as i32 - x2.g as i32).pow(2)
                     + (x1.b as i32 - x2.b  as i32).pow(2)
             };
-                
+
             let energy_y = {
                 let y1 = pixels[i - width];
                 let y2 = pixels[i + width];
@@ -296,12 +295,12 @@ pub fn calculate_energy(&mut self, width: usize, height: usize, pixels: &amp;[RG
           </aside>
         </section>
 
-				<section>
+        <section>
           <h2>#2 Find min-energy path</h2>
 
           <p>From each pixel, either go down + left, down, or down + right, depending on which pixel has the least energy.</p>
 
-          <img src="./img/HJoceanSmallVerticalSeam-autolevelled.png">         
+          <img src="./img/HJoceanSmallVerticalSeam-autolevelled.png">
 
           <aside class="notes">
             * Stage 2 is to use the calculated energy to find the path of minimum energy.
@@ -310,27 +309,27 @@ pub fn calculate_energy(&mut self, width: usize, height: usize, pixels: &amp;[RG
           </aside>
         </section>
 
-				<section>
+        <section>
           <h2>Calculating min-energy path</h2>
 
           <pre><code data-trim>
 // pseudocode
-for from_pixel in all_pixels {
-    for to_pixel in find_the_3_reachable_pixels(from_pixel) {
-        if is_best_path_to(from_pixel, to_pixel) {
-            record_best_path(from_pixel, to_pixel);
+for pixel in all_pixels {
+    for pixel_option in find_pixel_options(pixel) {
+        if is_best_path_to(pixel, pixel_option) {
+            record_best_path(pixel, pixel_option);
         }
     }
 }
           </code></pre>
           <aside class="notes">
-            - This is checking whether the from_pixel can provide a better path to to_pixel than is already recorded.
+            - This is checking whether the pixel can provide a better path to to_pixel than is already recorded.
         </section>
 
         <section>
           <h2>Same again, but now in Rust</h2>
           <pre><code data-trim>
-pub fn find_seam(&mut self, width: usize, height: usize) -> Vec&lt;usize&gt; {
+pub fn find_seam(&amp;mut self, width: usize, height: usize) -> Vec&lt;usize&gt; {
     for pixel in 0..(num_pixels - width) {
         let next_pixel_options = if pixel % width == 0 { // first column
             vec![pixel + width, pixel + width + 1]
@@ -361,7 +360,7 @@ pub fn find_seam(&mut self, width: usize, height: usize) -> Vec&lt;usize&gt; {
             - Then remove that slice found.
           </aside>
         </section>
-      
+
         <section>
           <h2>How does that perform?</h2>
           <div class="fragment">
@@ -395,7 +394,7 @@ debug = true
           </aside>
         </section>
 
-				<section>
+        <section>
           <h2><a href="http://valgrind.org/">Valgrind</a>, or rather, <a href="http://valgrind.org/docs/manual/cl-manual.html">Callgrind</a></h2>
 
           <pre><code data-trim>
@@ -420,7 +419,7 @@ $ callgrind_annotate callgrind.out
           </aside>
         </section>
 
-				<section>
+        <section>
           <h2><a href="http://kcachegrind.sourceforge.net/html/Home.html">kcachegrind</a></h2>
 
           <ul>
@@ -459,7 +458,7 @@ $ callgrind_annotate callgrind.out
         <section>
           <h2>Cause of memory allocations</h2>
           <pre><code data-trim>
-pub fn find_seam(&mut self, width: usize, height: usize) -> Vec&lt;usize&gt; {
+pub fn find_seam(&amp;mut self, width: usize, height: usize) -> Vec&lt;usize&gt; {
     for pixel in 0..(num_pixels - width) {
         let next_pixel_options = if pixel % width == 0 {
             vec![pixel + width, pixel + width + 1] // ALLOCATION
@@ -489,21 +488,21 @@ pub fn find_seam(&mut self, width: usize, height: usize) -> Vec&lt;usize&gt; {
         </section>
 
         <section>
-          <h2>Fixed (30% faster)</h2>
+          <h2>Avoiding heap allocations</h2>
           <pre class="stretch"><code data-trim>
-pub fn find_seam(&mut self, width: usize, height: usize) -> Vec&lt;usize&gt; {
+pub fn find_seam(&amp;mut self, width: usize, height: usize) -> Vec&lt;usize&gt; {
     for pixel in 0..(num_pixels - width) {
         let tmp_len_2;
         let tmp_len_3;
-        let next_pixel_options: &[usize] = if pixel % width == 0 { // first column
+        let next_pixel_options: &amp;[usize] = if pixel % width == 0 { // first column
             tmp_len_2 = [pixel + width, pixel + width + 1];
-            &tmp_len_2
+            &amp;tmp_len_2
         } else if (pixel + 1) % width == 0 { // last column
             tmp_len_2 = [pixel + width - 1, pixel + width];
-            &tmp_len_2
+            &amp;tmp_len_2
         } else {
             tmp_len_3 = [pixel + width - 1, pixel + width, pixel + width + 1];
-            &tmp_len_3
+            &amp;tmp_len_3
         };
 
         // (no changes below this point)
@@ -521,7 +520,7 @@ pub fn find_seam(&mut self, width: usize, height: usize) -> Vec&lt;usize&gt; {
           </code></pre>
 
           <aside class="notes">
-            - 1600 ms -> 1150 ms
+            - 1600 ms -> 1150 ms (30% faster)
             - Allocate 2 fixed-size arrays on the stack
             - Return a reference to them
             - Rust is clever enough to avoid complaining about un-initialised variables
@@ -532,7 +531,7 @@ pub fn find_seam(&mut self, width: usize, height: usize) -> Vec&lt;usize&gt; {
         <section>
           <h2>or use a closure</h2>
           <pre class="stretch"><code data-trim>
-pub fn find_seam(&mut self, width: usize, height: usize) -> Vec&lt;usize&gt; {
+pub fn find_seam(&amp;mut self, width: usize, height: usize) -> Vec&lt;usize&gt; {
         let mut relax_edge = |from_pixel: usize, to_pixel: usize| {
             if self.dist_to[to_pixel] > self.dist_to[from_pixel] + self.energy[to_pixel] {
                 self.dist_to[to_pixel] = self.dist_to[from_pixel] + self.energy[to_pixel];
@@ -567,7 +566,7 @@ pub fn find_seam(&mut self, width: usize, height: usize) -> Vec&lt;usize&gt; {
           </aside>
         </section>
 
-				<section>
+        <section>
           <h2>Now what?</h2>
 
           <p>kcachegrind says the slowest line of code now is:</p>
@@ -577,13 +576,13 @@ pub fn find_seam(&mut self, width: usize, height: usize) -> Vec&lt;usize&gt; {
           <p>but I don't see an easy way to speed that up.</p>
         </section>
 
-				<section>
+        <section>
           <h2>Trying a different approach</h2>
           <pre><code data-trim>
 $ perf record ./target/release/2-seam-carving test-input.png -W 300
 $ perf report
           </code></pre>
-          
+
           <ul>
             <li>Bonus: <code>perf</code> is faster so remove a full 300 pixels</li>
           </ul>
@@ -593,321 +592,163 @@ $ perf report
           </aside>
         </section>
 
-				<section>
+        <section>
           <img class="stretch" src="img/perf-report-of-modulus.png">
 
           <aside class="notes">
             * I'm mostly a stranger to disassembly
             * Thankfully perf report highlights the slow bits in red
             * Based on the source there, the modulus is the slowest bit
-            * Can we avoid the modulus?
+            * Can we avoid the modulus? Yep.
+            * actually when I rewrote this code first time, I just cached the first modulus and used it for the second check
+            * but let's skip straight to the better code
           </aside>
         </section>
 
-				<section>
-          <h2></h2>
+        <section>
+          <h2>Use nested loop instead</h2>
 
-          <p></p>
+          <pre><code data-trim>
+for y in 0..(height - 1) {
+    let height_offset = y * width;
+
+    relax_edge(height_offset, height_offset + width);
+    relax_edge(height_offset, height_offset + width + 1);
+
+    for x in 1..(width - 1) {
+        let pixel = height_offset + x;
+        relax_edge(pixel, pixel + width - 1);
+        relax_edge(pixel, pixel + width);
+        relax_edge(pixel, pixel + width + 1);
+    }
+
+    let last_col_pixel = height_offset + width - 1;
+    relax_edge(last_col_pixel, last_col_pixel + width - 1);
+    relax_edge(last_col_pixel, last_col_pixel + width);
+}
+          </code></pre>
+
+          <aside class="notes">
+            - we've added an inner loop
+            - and unrolled some of the inner loop so we have no ifs there either
+            - we can use a similar trick for energy calculation
+            - 1.2 seconds to 0.5 seconds - 60% faster!
+          </aside>
+        </section>
+
+        <section>
+          <h2>Ideas for more speed?</h2>
 
           <ul>
-            <li></li>
-            <li></li>
+            <li>Indexing is still slow - cache & use windows when iterating?</li>
+            <li>Copy paste closure and manually cache data from earlier checks</li>
+            <li>Cheat by using parallelism ;-)</li>
           </ul>
 
           <aside class="notes">
-            *
+            * Not including algorithm tricks, which I haven't explored here.
+            ** Obvious one is no need to relax edge between a side pixel and the one below it
+            ** Also don't need to recalculate all the energy from scratch
+            * Just for fun, what if we didn't need to do bounds checks when indexing?
           </aside>
         </section>
 
-				<section>
-          <h2></h2>
+        <section>
+          <h2>unsafe { #yolo }</h2>
+          <pre><code data-trim>
+unsafe {
+    let mut relax_edge = |from_pixel: usize, to_pixel: usize| {
+        if *self.dist_to.get_unchecked(to_pixel) >
+                *self.dist_to.get_unchecked(from_pixel) +
+                *self.energy.get_unchecked(to_pixel) {
+            *self.dist_to.get_unchecked_mut(to_pixel) =
+                *self.dist_to.get_unchecked(from_pixel) +
+                *self.energy.get_unchecked(to_pixel);
+            *self.prev_vertex.get_unchecked_mut(to_pixel) = from_pixel;
+        }
+    };
+}
+          </code></pre>
 
-          <p></p>
-
-          <ul>
-            <li></li>
-            <li></li>
-          </ul>
+          <p>Unsafety everywhere takes us from 450 ms to 300 ms</p>
+          <p>Useful: quantifies cost of bounds checking</p>
 
           <aside class="notes">
-            *
+            * A sample of using unsafe techniques to avoid bounds checks
+            * Important note: 150ms speedup isn't just from this snippet (e.g. also from energy calculation)
+            * Even with this unsafety, the client code is still safe, which is nice.
+            * Even if we don't keep this, then it's useful as a lower bound for our optimisation efforts: we know bounds checking isn't taking more than 150ms.
           </aside>
         </section>
 
-				<section>
-          <h2></h2>
+        <section>
+          <h2>Recap of gains</h2>
 
-          <p></p>
+          <pre>
+                Basic semi optimised version                      1.65 s
+                Avoid per pixel heap allocations                  1.25 s
+                Use closure rather than stack allocated array     1.22 s
+                Cache modulo result                                .90 s
+                Use nested loops to avoid modulus calls            .44 s
+                Bypass bounds checking by using unsafe indexing    .31 s
+          </pre>
 
-          <ul>
-            <li></li>
-            <li></li>
-          </ul>
+          <p>~4x better performance!</p>
+          <p>(or ~5x better if using unsafe)</p>
+        </section>
+
+        <section>
+          <h2>Thanks!</h2>
+          <br>
+          <p>
+            Seam carving code for each step of gains at<br>
+            <a href="https://github.com/caspark/2015-05-rust-perf-talk-code">github.com/caspark/2015-05-rust-perf-talk-code</a>
+          </p>
+          <br>
+          <p>
+            Slides + scripts to benchmark &amp; profile each step at
+            <a href="https://github.com/caspark/2015-05-rust-perf-talk">github.com/caspark/2015-05-rust-perf-talk</a>
+          </p>
 
           <aside class="notes">
-            *
+            * Questions?
           </aside>
         </section>
 
-				<section>
-          <h2></h2>
+            </div>
+        </div>
 
-          <p></p>
+        <script src="lib/js/head.min.js"></script>
+        <script src="js/reveal.js"></script>
 
-          <ul>
-            <li></li>
-            <li></li>
-          </ul>
+        <script>
 
-          <aside class="notes">
-            *
-          </aside>
-        </section>
-
-				<section>
-          <h2></h2>
-
-          <p></p>
-
-          <ul>
-            <li></li>
-            <li></li>
-          </ul>
-
-          <aside class="notes">
-            *
-          </aside>
-        </section>
-
-				<section>
-          <h2></h2>
-
-          <p></p>
-
-          <ul>
-            <li></li>
-            <li></li>
-          </ul>
-
-          <aside class="notes">
-            *
-          </aside>
-        </section>
-
-				<section>
-          <h2></h2>
-
-          <p></p>
-
-          <ul>
-            <li></li>
-            <li></li>
-          </ul>
-
-          <aside class="notes">
-            *
-          </aside>
-        </section>
-
-				<section>
-          <h2></h2>
-
-          <p></p>
-
-          <ul>
-            <li></li>
-            <li></li>
-          </ul>
-
-          <aside class="notes">
-            *
-          </aside>
-        </section>
-
-				<section>
-          <h2></h2>
-
-          <p></p>
-
-          <ul>
-            <li></li>
-            <li></li>
-          </ul>
-
-          <aside class="notes">
-            *
-          </aside>
-        </section>
-
-				<section>
-          <h2></h2>
-
-          <p></p>
-
-          <ul>
-            <li></li>
-            <li></li>
-          </ul>
-
-          <aside class="notes">
-            *
-          </aside>
-        </section>
-
-				<section>
-          <h2></h2>
-
-          <p></p>
-
-          <ul>
-            <li></li>
-            <li></li>
-          </ul>
-
-          <aside class="notes">
-            *
-          </aside>
-        </section>
-
-				<section>
-          <h2></h2>
-
-          <p></p>
-
-          <ul>
-            <li></li>
-            <li></li>
-          </ul>
-
-          <aside class="notes">
-            *
-          </aside>
-        </section>
-
-				<section>
-          <h2></h2>
-
-          <p></p>
-
-          <ul>
-            <li></li>
-            <li></li>
-          </ul>
-
-          <aside class="notes">
-            *
-          </aside>
-        </section>
-
-				<section>
-          <h2></h2>
-
-          <p></p>
-
-          <ul>
-            <li></li>
-            <li></li>
-          </ul>
-
-          <aside class="notes">
-            *
-          </aside>
-        </section>
-
-				<section>
-          <h2></h2>
-
-          <p></p>
-
-          <ul>
-            <li></li>
-            <li></li>
-          </ul>
-
-          <aside class="notes">
-            *
-          </aside>
-        </section>
-
-				<section>
-          <h2></h2>
-
-          <p></p>
-
-          <ul>
-            <li></li>
-            <li></li>
-          </ul>
-
-          <aside class="notes">
-            *
-          </aside>
-        </section>
-
-				<section>
-          <h2></h2>
-
-          <p></p>
-
-          <ul>
-            <li></li>
-            <li></li>
-          </ul>
-
-          <aside class="notes">
-            *
-          </aside>
-        </section>
-
-				<section>
-          <h2></h2>
-
-          <p></p>
-
-          <ul>
-            <li></li>
-            <li></li>
-          </ul>
-
-          <aside class="notes">
-            *
-          </aside>
-        </section>
-
-			</div>
-		</div>
-
-		<script src="lib/js/head.min.js"></script>
-		<script src="js/reveal.js"></script>
-
-		<script>
-
-			// Full list of configuration options available at:
-			// https://github.com/hakimel/reveal.js#configuration
-			Reveal.initialize({
-				controls: true,
-				progress: true,
-				history: true,
-				center: true,
+            // Full list of configuration options available at:
+            // https://github.com/hakimel/reveal.js#configuration
+            Reveal.initialize({
+                controls: true,
+                progress: true,
+                history: true,
+                center: true,
         width: "960",
         height: "700",
         maxScale: 2.0,
         margin: 0.0,
 
-				transition: 'slide', // none/fade/slide/convex/concave/zoom
+                transition: 'slide', // none/fade/slide/convex/concave/zoom
 
-				// Optional reveal.js plugins
-				dependencies: [
-					{ src: 'lib/js/classList.js', condition: function() { return !document.body.classList; } },
-					{ src: 'plugin/markdown/marked.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
-					{ src: 'plugin/markdown/markdown.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
-					{ src: 'plugin/highlight/highlight.js', async: true, condition: function() { return !!document.querySelector( 'pre code' ); }, callback: function() { hljs.initHighlightingOnLoad(); } },
-					{ src: 'plugin/zoom-js/zoom.js', async: true },
-					{ src: 'plugin/notes/notes.js', async: true }
-				]
-			});
+                // Optional reveal.js plugins
+                dependencies: [
+                    { src: 'lib/js/classList.js', condition: function() { return !document.body.classList; } },
+                    { src: 'plugin/markdown/marked.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+                    { src: 'plugin/markdown/markdown.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+                    { src: 'plugin/highlight/highlight.js', async: true, condition: function() { return !!document.querySelector( 'pre code' ); }, callback: function() { hljs.initHighlightingOnLoad(); } },
+                    { src: 'plugin/zoom-js/zoom.js', async: true },
+                    { src: 'plugin/notes/notes.js', async: true }
+                ]
+            });
 
-		</script>
+        </script>
 
-	</body>
+    </body>
 </html>
