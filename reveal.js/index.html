@@ -154,7 +154,7 @@
         </section>
 
         <section>
-          <h2>Competition!</h2>
+          <h2>A Competition!</h2>
 
           <p>Everybody wants to prove their language is the best.</p>
 
@@ -202,13 +202,10 @@
           <h2>Our problem: seam carving</h2>
 
           <ul>
-            <li>Lossy image resizing</li>
-            <li>Remove the least interesting <br>vertical slices of the image</li>
+            <li>A clever way to resize images</li>
+            <li>Remove the least interesting vertical slices of the image</li>
           </ul>
-        </section>
-
-        <section>
-          <h2>Before &amp; After</h2>
+          <br>
           <img src="./img/HJoceanSmall.png">
           <img src="./img/HJoceanSmallShrunk.png">
 
@@ -221,86 +218,29 @@
         </section>
 
         <section>
-          <h2>#1 Find pixel energy</h2>
+          <h2>First calculate pixel energies</h2>
 
+          <p>Energy is how interesting the pixel is.</p>
           <img src="./img/HJoceanSmallEnergy-autolevelled.png">
-          <p><strong>Why?</strong> Energy is how interesting the pixel is.</p>
-          <p>Want to avoid removing interesting pixels.</p>
+          <p><strong>Why?</strong> Want to avoid removing interesting pixels.</p>
 
           <aside class="notes">
             * Algorithm operates in 2 stages
             * First stage is finding the energy of each pixel
             * This sample picture is photoshopped to make the energy more obvious
+            * Energy of a given pixel is calculated by the difference in colour of surrounding pixels
+            * Won't show calculation or code to save time.
           </aside>
         </section>
 
         <section>
-          <h2>Calculating energy</h2>
-
-          <p>Energy of a pixel <strong>p</strong> surrounded by pixels <strong>T</strong>, <strong>L</strong>, <strong>R</strong>, &amp; <strong>B</strong>:
-
-          <pre>
-              | T |
-            L | p | R     energy of pixel p = (T - B) ^ 2 + (L - R) ^ 2
-              | B |
-          </pre>
-
-          <p>(The difference in colour of the surrounding pixels, squared.)</p>
-          <br>
-          <p>Special case: pixels on edge of image always have max energy.</p>
-
-          <aside class="notes">
-            * Pixels are actually composed of red, green, &amp; blue, so do this calc for each colour component and sum the result.
-          </aside>
-        </section>
-
-        <section>
-          <pre class="stretch"><code data-trim>
-pub fn calculate_energy(&amp;mut self, width: usize, height: usize, pixels: &amp;[RGB&lt;u8&gt;]) {
-    let num_pixels = width * height;
-    for i in 0..num_pixels {
-        self.energy[i] = if i &lt; width { // first row
-            MAX_PIXEL_ENERGY
-        } else if i > width * (height - 1) { // last row
-            MAX_PIXEL_ENERGY
-        } else if i % width == 0 { // first column
-            MAX_PIXEL_ENERGY
-        } else if (i + 1) % width == 0 { // last column
-            MAX_PIXEL_ENERGY
-        } else {
-            let energy_x = {
-                let x1 = pixels[i - 1];
-                let x2 = pixels[i + 1];
-                (x1.r as i32 - x2.r as i32).pow(2) + (x1.g as i32 - x2.g as i32).pow(2)
-                    + (x1.b as i32 - x2.b  as i32).pow(2)
-            };
-
-            let energy_y = {
-                let y1 = pixels[i - width];
-                let y2 = pixels[i + width];
-                (y1.r as i32 - y2.r as i32).pow(2) + (y1.g as i32 - y2.g as i32).pow(2)
-                    + (y1.b as i32 - y2.b as i32).pow(2)
-            };
-
-            energy_x + energy_y
-        };
-    }
-}
-          </code></pre>
-
-          <aside class="notes">
-            * So here's a first cut at some code to do that - minus asserts
-            * Loop through pixels in the image, then set the energy to max if the pixel is on the edge, otherwise calculate the energy as per the formula
-            * We'll come back to this later
-          </aside>
-        </section>
-
-        <section>
-          <h2>#2 Find min-energy path</h2>
+          <h2>Now find min-energy seam</h2>
 
           <p>From each pixel, either go down + left, down, or down + right, depending on which pixel has the least energy.</p>
 
           <img src="./img/HJoceanSmallVerticalSeam-autolevelled.png">
+
+          <p>Then remove this seam (and rinse and repeat).</p>
 
           <aside class="notes">
             * Stage 2 is to use the calculated energy to find the path of minimum energy.
@@ -310,18 +250,24 @@ pub fn calculate_energy(&amp;mut self, width: usize, height: usize, pixels: &amp
         </section>
 
         <section>
-          <h2>Calculating min-energy path</h2>
+          <h2>Calculating min-energy seam</h2>
+
+          <p>For each pixel, see if using this pixel to get to<br>
+            each next pixel option results in a better seam</p>
 
           <pre><code data-trim>
 // pseudocode
 for pixel in all_pixels {
+    //   p     &lt;- p is `pixel`
+    // 1 2 3   &lt;- `pixel_option` is one of the three pixels below `pixel`
     for pixel_option in find_pixel_options(pixel) {
-        if is_best_path_to(pixel, pixel_option) {
-            record_best_path(pixel, pixel_option);
+        if is_best_path_to_pixel_option(pixel, pixel_option) {
+            record_best_path_to_pixel_option(pixel, pixel_option);
         }
     }
 }
           </code></pre>
+          <p>(If `pixel` is on edge of image, there are only 2 `pixel_option`s)</p>
           <aside class="notes">
             - This is checking whether the pixel can provide a better path to to_pixel than is already recorded.
         </section>
@@ -367,7 +313,7 @@ pub fn find_seam(&amp;mut self, width: usize, height: usize) -> Vec&lt;usize&gt;
             <ul>
                 <li>~1600ms to remove 300 pixels from a 507 x 285 image</li>
                 <li>Worse than Java :(</li>
-                <li>Let's profile to make it faster!</li>
+                <li>Let's profile it to see how make it faster!</li>
             </ul>
           </div>
 
@@ -378,11 +324,11 @@ pub fn find_seam(&amp;mut self, width: usize, height: usize) -> Vec&lt;usize&gt;
         </section>
 
         <section>
-          <h2>Aside: Cargo debug vs release</h2>
+          <h2>Readable profiling results</h2>
           <ul>
-            <li>debug builds (<code>cargo build</code>) are not optimised
-            <li>release builds (<code>cargo build --release</code>) have no debug info
-            <li>solution: add debug info to release builds
+            <li>debug builds (<code>cargo build</code>) are not optimised</li>
+            <li>release builds (<code>cargo build --release</code>) have no debug info</li>
+            <li>solution: add debug info to release builds</li>
           </ul>
           <pre><code data-trim>
 # in Cargo.toml
