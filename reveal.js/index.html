@@ -685,12 +685,12 @@ unsafe {
           <h2>Recap of gains</h2>
 
           <pre>
-                Basic semi optimised version                      1.65 s
-                Avoid per pixel heap allocations                  1.25 s
-                Use closure rather than stack allocated array     1.22 s
-                Cache modulo result                                .90 s
-                Use nested loops to avoid modulus calls            .44 s
-                Bypass bounds checking by using unsafe indexing    .31 s
+    Basic version                                     1.65 s ||||||||||||||||
+    Avoid per pixel heap allocations                  1.25 s ||||||||||||
+    Use closure rather than stack allocated array     1.22 s ||||||||||||
+    Cache modulo when finding edges of image           .90 s |||||||||
+    Use nested loops to avoid using modulus            .44 s ||||
+    Bypass bounds checking by using unsafe indexing    .31 s |||
           </pre>
 
           <p>~4x better performance!</p>
