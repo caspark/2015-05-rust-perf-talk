@@ -1,0 +1,913 @@
+<!doctype html>
+<html lang="en">
+
+	<head>
+		<meta charset="utf-8">
+
+		<title>2015-05 Rust Performance Talk</title>
+
+		<meta name="description" content="Talk on Rust performance">
+		<meta name="author" content="Caspar Krieger">
+
+		<meta name="apple-mobile-web-app-capable" content="yes" />
+		<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui">
+
+		<link rel="stylesheet" href="css/reveal.css">
+		<link rel="stylesheet" href="css/theme/night.css" id="theme">
+
+		<!-- Code syntax highlighting -->
+		<link rel="stylesheet" href="lib/css/zenburn.css">
+
+		<!-- Printing and PDF exports -->
+		<script>
+			var link = document.createElement( 'link' );
+			link.rel = 'stylesheet';
+			link.type = 'text/css';
+			link.href = window.location.search.match( /print-pdf/gi ) ? 'css/print/pdf.css' : 'css/print/paper.css';
+			document.getElementsByTagName( 'head' )[0].appendChild( link );
+		</script>
+
+		<!--[if lt IE 9]>
+		<script src="lib/js/html5shiv.js"></script>
+		<![endif]-->
+	</head>
+
+	<body>
+
+		<div class="reveal markdown">
+
+			<!-- Any section element inside of this container is displayed as a slide -->
+			<div class="slides">
+				<section>
+					<h2>From Java to the Metal</h2>
+          <br>
+					<h4>Pitting Rust against the JVM</h4>
+          <br>
+					<p>
+						<small><a href="http://asparck.com">Caspar Krieger</a> / Java Dev @ Atlassian</small>
+					</p>
+				</section>
+
+        <!--
+            - Aside: Massive disclaimer: I've written a few thousands lines of Rust code over the last 5 months, but over several small projects on my own.
+            -- That's a great way to learn Rust because you're not tied down by previous decisions
+            --- and you don't have to worry about keeping old projects up to date when Rust introduces breaking changes
+            -- But working on my own without any code review means that I'm probably not writing idiomatic Rust code yet.
+            -- Also, things here might be flat out wrong, but I trust Huon will shout at me when I do say anything incorrect.
+
+            - And I ran a study group for a bunch of other people, most of whom solved it in Java (well, some C#, Python, Haskell, Go, Scala & Perl, but mostly Java)
+            -- So what happens when you get a bunch of people using different languages?
+            --- Competition! Everyone wants to prove their language is the best.
+            -- I was unwittingly led down the path of performance optimisations, and thinking about a whole bunch of low level things that I normally don't give a damn about
+
+            - So let me take you on a journey of one such competition, where I tried to optimize the hell out of Rust code.
+            -- Aside from seeing how to find what's slow in Rust code, this is also some "real" code, so those people who are here purely because they're curious in the language should get some feel for the syntax and how it feels to work in it
+
+            [ Walk through the code of my naive solution, give timing output ]
+
+            [ "You don't know what's slow, so let's profile it" - callgrind output; mention trick to get callgrind to resolve Rust library source, and mention need to include debug information into release binaries so we can profile them ]
+
+            [ Point out the heap allocation that's slow; show trick Huon pointed out with fixed size arrays on the stack ]
+
+            [ New profiles, new timing info ]
+
+            [ Modulus slowness isn't really clear; introduce `perf` and perf report - mention it's a sampling profiler ]
+
+            [ Point out the slow modulus comparison based on assembly; extract that out, mention it's a bit embarrasing that Rust doesn't optimise that for us ]
+
+            ** See what other perf gains we can eke out from the Rust code and write it up **
+          -->
+
+				<section>
+          <h2>The other side of Rust</h2>
+
+          <p>More than a better language for C/C++ devs</p>
+
+          <aside class="notes">
+            * Lot of focus on whether Rust is a suitable alternative for C/C++ devs
+            * Argument about whether C++ devs will switch, etc
+            * I don't really care
+          </aside>
+        </section>
+
+				<section>
+          <h2>Systems programming for the masses</h2>
+
+          <p>For me, C++ is a massive footgun:</p>
+
+          <ul>
+            <li>Pointer arithmetic, use after free, etc</li>
+            <li>Is X undefined behaviour?</li>
+          </ul>
+
+          <aside class="notes">
+            * Write a low level language without blowing my feet off
+            * Best case, I get a segfault in a particular test case
+            * Worst case, I've got a mistake and I don't even realise it
+            * Takes a lot of time to learn C++ properly
+          </aside>
+        </section>
+
+				<section>
+          <h2>Why even bother as a Java dev?</h2>
+
+          <ul>
+            <li>Infrastructure needs C-level code (e.g. Apache modules)</li>
+            <li>Fast & easy to distribute cmd line tools</li>
+            <li>Game development as a hobby</li>
+          </ul>
+
+          <aside class="notes">
+            * Missing piece in my toolbox
+          </aside>
+        </section>
+
+				<section>
+          <h2>Question</h2>
+          <p>How do you get a Java dev to learn a new language like Rust?</p>
+
+          <aside class="notes">
+            - Especially when that language is reputed to have a steep learning curve
+            - And the language had only just reached Alpha state
+          </aside>
+        </section>
+
+        <section>
+          <h2>Answer</h2>
+          <p>A: Do the Java-based <em>Algorithms</em> Coursera course<br>... in Rust</p>
+
+          <aside class="notes">
+            - Good because I have a piece of paper which claims that I know most of it already
+            ... at least in theory
+            - Do all the assignments in Rust
+            - Have to rewrite a lot of provided Java code too
+            - Good for adjusting known patterns to Rust
+          </aside>
+        </section>
+
+        <section>
+          <p>... shit, I've replaced one problem by another</p>
+
+          <aside class="notes">
+            Great, gotten rid of one problem, replaced it with another
+            How to stay motivated for the Coursera course?
+          </aside>
+        </section>
+
+				<section>
+          <h2><em>Algorithms study group</em></h2>
+
+          <p>"For people who want to brush up on Algorithms"</p>
+
+          <p>Most people used Java (for auto-marker), but also saw:</p>
+
+          <ul>
+            <li>Scala, Haskell</li>
+            <li>Python, Perl</li>
+            <li>Go, C#</li>
+          </ul>
+
+          <aside class="notes">
+            - Run a study group to stay motivated
+            - Java was most popular since the marker for the Course only worked for Java
+            - Lots of different languages
+            - What happens when people solve the same problem in different languages?
+          </aside>
+        </section>
+
+				<section>
+          <h2>Competition!</h2>
+
+          <p>Everybody wants to prove their language is the best.</p>
+
+          <aside class="notes">
+            * Got drawn into performance optimisation
+            * Lots of low level details I normally never think about as a Java dev
+          </aside>
+        </section>
+
+				<section>
+          <h2>let's optimize some real Rust</h2>
+
+          <aside class="notes">
+            * Touch on some tools for optimising Rust code
+            * (probably familiar to C/C++ people)
+            * Also shows off some real Rust code
+            * Helpful for beginners
+          </aside>
+        </section>
+
+				<section>
+          <h2>Our problem: seam carving</h2>
+
+          <ul>
+            <li>Lossy image resizing</li>
+            <li>Remove the least interesting <br>vertical slices of the image</li>
+          </ul>
+        </section>
+
+				<section>
+          <h2>Before & After</h2>
+          <img src="./img/HJoceanSmall.png">         
+          <img src="./img/HJoceanSmallShrunk.png">         
+
+          <aside class="notes">
+            * 150 pixel slices removed
+            * Water between surfers has been removed
+            * Water on right has been removed
+            * Some slices of land on the left have been removed
+          </aside>
+        </section>
+
+				<section>
+          <h2>#1 Find pixel energy</h2>
+
+          <img src="./img/HJoceanSmallEnergy-autolevelled.png">         
+          <p><strong>Why?</strong> Energy is how interesting the pixel is.</p>
+          <p>Want to avoid removing interesting pixels.</p>
+
+          <aside class="notes">
+            * Algorithm operates in 2 stages
+            * First stage is finding the energy of each pixel
+            * This sample picture is photoshopped to make the energy more obvious
+          </aside>
+        </section>
+
+				<section>
+          <h2>Calculating energy</h2>
+
+          <p>Energy of a pixel <strong>p</strong> surrounded by pixels <strong>T</strong>, <strong>L</strong>, <strong>R</strong>, &amp; <strong>B</strong>:
+          
+          <pre>
+              | T |
+            L | p | R     energy of pixel p = (T - B) ^ 2 + (L - R) ^ 2
+              | B |       
+          </pre>
+
+          <p>(The difference in colour of the surrounding pixels, squared.)</p>
+          <br>
+          <p>Special case: pixels on edge of image always have max energy.</p>
+
+          <aside class="notes">
+            * Pixels are actually composed of red, green, & blue, so do this calc for each colour component and sum the result.
+          </aside>
+        </section>
+
+        <section>
+          <pre class="stretch"><code data-trim>
+pub fn calculate_energy(&mut self, width: usize, height: usize, pixels: &amp;[RGB&lt;u8&gt;]) {
+    let num_pixels = width * height;
+    for i in 0..num_pixels {
+        self.energy[i] = if i < width { // first row
+            MAX_PIXEL_ENERGY
+        } else if i > width * (height - 1) { // last row
+            MAX_PIXEL_ENERGY
+        } else if i % width == 0 { // first column
+            MAX_PIXEL_ENERGY
+        } else if (i + 1) % width == 0 { // last column
+            MAX_PIXEL_ENERGY
+        } else {
+            let energy_x = {
+                let x1 = pixels[i - 1];
+                let x2 = pixels[i + 1];
+                (x1.r as i32 - x2.r as i32).pow(2) + (x1.g as i32 - x2.g as i32).pow(2)
+                    + (x1.b as i32 - x2.b  as i32).pow(2)
+            };
+                
+            let energy_y = {
+                let y1 = pixels[i - width];
+                let y2 = pixels[i + width];
+                (y1.r as i32 - y2.r as i32).pow(2) + (y1.g as i32 - y2.g as i32).pow(2)
+                    + (y1.b as i32 - y2.b as i32).pow(2)
+            };
+
+            energy_x + energy_y
+        };
+    }
+}
+          </code></pre>
+
+          <aside class="notes">
+            * So here's a first cut at some code to do that - minus asserts
+            * Loop through pixels in the image, then set the energy to max if the pixel is on the edge, otherwise calculate the energy as per the formula
+            * We'll come back to this later
+          </aside>
+        </section>
+
+				<section>
+          <h2>#2 Find min-energy path</h2>
+
+          <p>From each pixel, either go down + left, down, or down + right, depending on which pixel has the least energy.</p>
+
+          <img src="./img/HJoceanSmallVerticalSeam-autolevelled.png">         
+
+          <aside class="notes">
+            * Stage 2 is to use the calculated energy to find the path of minimum energy.
+            * Because we're trying to find a line of pixels, the search from each pixel only has 3 options.
+            * Again, image is photoshopped.
+          </aside>
+        </section>
+
+				<section>
+          <h2>Calculating min-energy path</h2>
+
+          <pre><code data-trim>
+// pseudocode
+for from_pixel in all_pixels {
+    for to_pixel in find_the_3_reachable_pixels(from_pixel) {
+        if is_best_path_to(from_pixel, to_pixel) {
+            record_best_path(from_pixel, to_pixel);
+        }
+    }
+}
+          </code></pre>
+          <aside class="notes">
+            - This is checking whether the from_pixel can provide a better path to to_pixel than is already recorded.
+        </section>
+
+        <section>
+          <h2>Same again, but now in Rust</h2>
+          <pre><code data-trim>
+pub fn find_seam(&mut self, width: usize, height: usize) -> Vec&lt;usize&gt; {
+    for pixel in 0..(num_pixels - width) {
+        let next_pixel_options = if pixel % width == 0 { // first column
+            vec![pixel + width, pixel + width + 1]
+        } else if (pixel + 1) % width == 0 { // last column
+            vec![pixel + width - 1, pixel + width]
+        } else {
+            vec![pixel + width - 1, pixel + width, pixel + width + 1]
+        };
+
+        for pixel_option in next_pixel_options {
+            if self.dist_to[pixel_option] &gt;
+                        self.dist_to[pixel] + self.energy[pixel_option] {
+                self.dist_to[pixel_option] =
+                        self.dist_to[pixel] + self.energy[pixel_option];
+                self.prev_vertex[pixel_option] = pixel;
+            }
+        }
+    }
+    // [finally loop through self.prev_vertex to find the best path]
+}
+          </code></pre>
+
+          <aside class="notes">
+            - Use modulus to figure out whether we're on the edge to do special case handling
+            - Store the reachable pixel options in a vec, and then loop through them to see if the current pixel provides a better path to them
+            - self.dist_to records the cost of the best path to a given pixel
+            - self.prev_vertex records the previous vertex
+            - Then remove that slice found.
+          </aside>
+        </section>
+      
+        <section>
+          <h2>How does that perform?</h2>
+          <div class="fragment">
+            <ul>
+                <li>~1600ms to remove 300 pixels from a 507 x 285 image</li>
+                <li>Worse than Java :(</li>
+                <li>Let's profile to make it faster!</li>
+            </ul>
+          </div>
+
+          <aside class="notes">
+            * So that's reasonable code - how does it do?
+            * JVM has had years of tuning so that's not surprising
+          </aside>
+        </section>
+
+        <section>
+          <h2>Aside: Cargo debug vs release</h2>
+          <ul>
+            <li>debug builds (<code>cargo build</code>) are not optimised
+            <li>release builds (<code>cargo build --release</code>) have no debug info
+            <li>solution: add debug info to release builds
+          </ul>
+          <pre><code data-trim>
+# in Cargo.toml
+[profile.release]
+debug = true
+          </code></pre>
+          <aside class="notes">
+            - I think including debug info could affect profiling, but that's a risk I have to take
+          </aside>
+        </section>
+
+				<section>
+          <h2><a href="http://valgrind.org/">Valgrind</a>, or rather, <a href="http://valgrind.org/docs/manual/cl-manual.html">Callgrind</a></h2>
+
+          <pre><code data-trim>
+$ valgrind --tool=callgrind --callgrind-out-file=callgrind.out \
+    ./target/release/2-seam-carving test-input.png -W 100
+$ callgrind_annotate callgrind.out
+          </code></pre>
+
+          <p><code>callgrind_annotate</code> gives you a list of functions<br>(sorted by executed instruction count)</p>
+
+          <br>
+
+          <ul>
+            <li>Pro tip #1: avoid profiling cargo! Run binary directly.</li>
+            <li>Pro tip #2: use smaller inputs - callgrind is slow.</li>
+          </ul>
+
+          <aside class="notes">
+
+            * Callgrind is a tool shipped with valgrind which records calls made to functions
+            * callgrind_annotate can show source too but is otherwise minimal, so use another tool for looking at results
+          </aside>
+        </section>
+
+				<section>
+          <h2><a href="http://kcachegrind.sourceforge.net/html/Home.html">kcachegrind</a></h2>
+
+          <ul>
+            <li>callgrind is based on another valgrind tool, <a href="http://valgrind.org/docs/manual/cg-manual.html">cachegrind</a></li>
+            <li>kcachegrind handles output files from both</li>
+            <li>much nicer output than callgrind_annotate</li>
+            <li>also handles recursive code properly</li>
+          </ul>
+
+          <p>Tip: go to Settings &gt; Configure Kcachegrind &gt; Annotations,<br>then add Rust source code dir.</p>
+
+          <aside class="notes">
+            * if you don't add Rust source code then inline code won't have available source
+            * Rust compiler (or llvm) inlines a lot of stuff, so that's pretty annoying
+          </aside>
+        </section>
+
+        <section>
+          <img class="stretch" src="./img/kcachegrind.png">
+
+          <aside class="notes">
+            screenshot of kcachegrind on callgrind output of our program
+          </aside>
+        </section>
+
+        <section>
+          <img class="stretch" src="./img/kcachegrind-allocations.png">
+
+          <aside class="notes">
+
+            - zoom in showing that je_mallocx and je_sdsallocx are making things slow
+            - where are we allocating memory?
+          </aside>
+        </section>
+
+        <section>
+          <h2>Cause of memory allocations</h2>
+          <pre><code data-trim>
+pub fn find_seam(&mut self, width: usize, height: usize) -> Vec&lt;usize&gt; {
+    for pixel in 0..(num_pixels - width) {
+        let next_pixel_options = if pixel % width == 0 {
+            vec![pixel + width, pixel + width + 1] // ALLOCATION
+        } else if (pixel + 1) % width == 0 {
+            vec![pixel + width - 1, pixel + width] // ALLOCATION
+        } else {
+            vec![pixel + width - 1, pixel + width, pixel + width + 1] // ALLOCATION
+        };
+
+        for pixel_option in next_pixel_options {
+            if self.dist_to[pixel_option] &gt;
+                        self.dist_to[pixel] + self.energy[pixel_option] {
+                self.dist_to[pixel_option] =
+                        self.dist_to[pixel] + self.energy[pixel_option];
+                self.prev_vertex[pixel_option] = pixel;
+            }
+        }
+    }
+    // [finally loop through self.prev_vertex to find the best path]
+}
+          </code></pre>
+
+          <aside class="notes">
+            - marked lines are creating Vecs, which store their contents on the heap (because it's a growable data type)
+            - how can we fix this?
+          </aside>
+        </section>
+
+        <section>
+          <h2>Fixed (30% faster)</h2>
+          <pre class="stretch"><code data-trim>
+pub fn find_seam(&mut self, width: usize, height: usize) -> Vec&lt;usize&gt; {
+    for pixel in 0..(num_pixels - width) {
+        let tmp_len_2;
+        let tmp_len_3;
+        let next_pixel_options: &[usize] = if pixel % width == 0 { // first column
+            tmp_len_2 = [pixel + width, pixel + width + 1];
+            &tmp_len_2
+        } else if (pixel + 1) % width == 0 { // last column
+            tmp_len_2 = [pixel + width - 1, pixel + width];
+            &tmp_len_2
+        } else {
+            tmp_len_3 = [pixel + width - 1, pixel + width, pixel + width + 1];
+            &tmp_len_3
+        };
+
+        // (no changes below this point)
+        for pixel_option in next_pixel_options {
+            if self.dist_to[pixel_option] &gt;
+                        self.dist_to[pixel] + self.energy[pixel_option] {
+                self.dist_to[pixel_option] =
+                        self.dist_to[pixel] + self.energy[pixel_option];
+                self.prev_vertex[pixel_option] = pixel;
+            }
+        }
+    }
+    // [finally loop through self.prev_vertex to find the best path]
+}
+          </code></pre>
+
+          <aside class="notes">
+            - 1600 ms -> 1150 ms
+            - Allocate 2 fixed-size arrays on the stack
+            - Return a reference to them
+            - Rust is clever enough to avoid complaining about un-initialised variables
+            - Rest of the code doesn't need to change
+          </aside>
+        </section>
+
+        <section>
+          <h2>or use a closure</h2>
+          <pre class="stretch"><code data-trim>
+pub fn find_seam(&mut self, width: usize, height: usize) -> Vec&lt;usize&gt; {
+        let mut relax_edge = |from_pixel: usize, to_pixel: usize| {
+            if self.dist_to[to_pixel] > self.dist_to[from_pixel] + self.energy[to_pixel] {
+                self.dist_to[to_pixel] = self.dist_to[from_pixel] + self.energy[to_pixel];
+                self.prev_vertex[to_pixel] = from_pixel;
+            }
+        };
+
+        // each pixel in the image has an edge to the pixel below and the pixel to the left and right of that
+        for pixel in 0..(num_pixels - width) {
+            if pixel % width == 0 { // first column
+                relax_edge(pixel, pixel + width);
+                relax_edge(pixel, pixel + width + 1);
+            } else if (pixel + 1) % width == 0 { // last column
+                relax_edge(pixel, pixel + width - 1);
+                relax_edge(pixel, pixel + width);
+            } else {
+                relax_edge(pixel, pixel + width - 1);
+                relax_edge(pixel, pixel + width);
+                relax_edge(pixel, pixel + width + 1);
+            }
+        }
+    }
+    // [finally loop through self.prev_vertex to find the best path]
+}
+          </code></pre>
+
+          <aside class="notes">
+            - Or we can do the same thing using a closure
+            - Approx same speed as using stack allocated array
+            - Suspect Rust inlines the closure
+            - A method in this case would work too, but it's slower unless hinted with #[inline(always)]
+          </aside>
+        </section>
+
+				<section>
+          <h2>Now what?</h2>
+
+          <p>kcachegrind says the slowest line of code now is:</p>
+          <pre><code data-trim>
+            if self.dist_to[to_pixel] > self.dist_to[from_pixel] + self.energy[to_pixel] {
+          </code></pre>
+          <p>but I don't see an easy way to speed that up.</p>
+        </section>
+
+				<section>
+          <h2>Trying a different approach</h2>
+          <pre><code data-trim>
+$ perf record ./target/release/2-seam-carving test-input.png -W 300
+$ perf report
+          </code></pre>
+          
+          <ul>
+            <li>Bonus: <code>perf</code> is faster so remove a full 300 pixels</li>
+          </ul>
+
+          <aside class="notes">
+            * Don't know much about perf - Huon showed me this trick so direct all your questions to him
+          </aside>
+        </section>
+
+				<section>
+          <img class="stretch" src="img/perf-report-of-modulus.png">
+
+          <aside class="notes">
+            * I'm mostly a stranger to disassembly
+            * Thankfully perf report highlights the slow bits in red
+            * Based on the source there, the modulus is the slowest bit
+            * Can we avoid the modulus?
+          </aside>
+        </section>
+
+				<section>
+          <h2></h2>
+
+          <p></p>
+
+          <ul>
+            <li></li>
+            <li></li>
+          </ul>
+
+          <aside class="notes">
+            *
+          </aside>
+        </section>
+
+				<section>
+          <h2></h2>
+
+          <p></p>
+
+          <ul>
+            <li></li>
+            <li></li>
+          </ul>
+
+          <aside class="notes">
+            *
+          </aside>
+        </section>
+
+				<section>
+          <h2></h2>
+
+          <p></p>
+
+          <ul>
+            <li></li>
+            <li></li>
+          </ul>
+
+          <aside class="notes">
+            *
+          </aside>
+        </section>
+
+				<section>
+          <h2></h2>
+
+          <p></p>
+
+          <ul>
+            <li></li>
+            <li></li>
+          </ul>
+
+          <aside class="notes">
+            *
+          </aside>
+        </section>
+
+				<section>
+          <h2></h2>
+
+          <p></p>
+
+          <ul>
+            <li></li>
+            <li></li>
+          </ul>
+
+          <aside class="notes">
+            *
+          </aside>
+        </section>
+
+				<section>
+          <h2></h2>
+
+          <p></p>
+
+          <ul>
+            <li></li>
+            <li></li>
+          </ul>
+
+          <aside class="notes">
+            *
+          </aside>
+        </section>
+
+				<section>
+          <h2></h2>
+
+          <p></p>
+
+          <ul>
+            <li></li>
+            <li></li>
+          </ul>
+
+          <aside class="notes">
+            *
+          </aside>
+        </section>
+
+				<section>
+          <h2></h2>
+
+          <p></p>
+
+          <ul>
+            <li></li>
+            <li></li>
+          </ul>
+
+          <aside class="notes">
+            *
+          </aside>
+        </section>
+
+				<section>
+          <h2></h2>
+
+          <p></p>
+
+          <ul>
+            <li></li>
+            <li></li>
+          </ul>
+
+          <aside class="notes">
+            *
+          </aside>
+        </section>
+
+				<section>
+          <h2></h2>
+
+          <p></p>
+
+          <ul>
+            <li></li>
+            <li></li>
+          </ul>
+
+          <aside class="notes">
+            *
+          </aside>
+        </section>
+
+				<section>
+          <h2></h2>
+
+          <p></p>
+
+          <ul>
+            <li></li>
+            <li></li>
+          </ul>
+
+          <aside class="notes">
+            *
+          </aside>
+        </section>
+
+				<section>
+          <h2></h2>
+
+          <p></p>
+
+          <ul>
+            <li></li>
+            <li></li>
+          </ul>
+
+          <aside class="notes">
+            *
+          </aside>
+        </section>
+
+				<section>
+          <h2></h2>
+
+          <p></p>
+
+          <ul>
+            <li></li>
+            <li></li>
+          </ul>
+
+          <aside class="notes">
+            *
+          </aside>
+        </section>
+
+				<section>
+          <h2></h2>
+
+          <p></p>
+
+          <ul>
+            <li></li>
+            <li></li>
+          </ul>
+
+          <aside class="notes">
+            *
+          </aside>
+        </section>
+
+				<section>
+          <h2></h2>
+
+          <p></p>
+
+          <ul>
+            <li></li>
+            <li></li>
+          </ul>
+
+          <aside class="notes">
+            *
+          </aside>
+        </section>
+
+				<section>
+          <h2></h2>
+
+          <p></p>
+
+          <ul>
+            <li></li>
+            <li></li>
+          </ul>
+
+          <aside class="notes">
+            *
+          </aside>
+        </section>
+
+				<section>
+          <h2></h2>
+
+          <p></p>
+
+          <ul>
+            <li></li>
+            <li></li>
+          </ul>
+
+          <aside class="notes">
+            *
+          </aside>
+        </section>
+
+				<section>
+          <h2></h2>
+
+          <p></p>
+
+          <ul>
+            <li></li>
+            <li></li>
+          </ul>
+
+          <aside class="notes">
+            *
+          </aside>
+        </section>
+
+			</div>
+		</div>
+
+		<script src="lib/js/head.min.js"></script>
+		<script src="js/reveal.js"></script>
+
+		<script>
+
+			// Full list of configuration options available at:
+			// https://github.com/hakimel/reveal.js#configuration
+			Reveal.initialize({
+				controls: true,
+				progress: true,
+				history: true,
+				center: true,
+        width: "960",
+        height: "700",
+        maxScale: 2.0,
+        margin: 0.0,
+
+				transition: 'slide', // none/fade/slide/convex/concave/zoom
+
+				// Optional reveal.js plugins
+				dependencies: [
+					{ src: 'lib/js/classList.js', condition: function() { return !document.body.classList; } },
+					{ src: 'plugin/markdown/marked.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+					{ src: 'plugin/markdown/markdown.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+					{ src: 'plugin/highlight/highlight.js', async: true, condition: function() { return !!document.querySelector( 'pre code' ); }, callback: function() { hljs.initHighlightingOnLoad(); } },
+					{ src: 'plugin/zoom-js/zoom.js', async: true },
+					{ src: 'plugin/notes/notes.js', async: true }
+				]
+			});
+
+		</script>
+
+	</body>
+</html>
