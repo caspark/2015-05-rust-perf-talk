@@ -317,22 +317,23 @@ pub fn find_seam(&amp;mut self, width: usize, height: usize) -> Vec&lt;usize&gt;
           <div class="fragment">
             <ul>
                 <li>~1600ms to remove 300 pixels from a 507 x 285 image</li>
-                <li>Worse than Java :(</li>
+                <li>Better than Java (2000 ms) already :)</li>
                 <li>Let's profile it to see how make it faster!</li>
             </ul>
           </div>
 
           <aside class="notes">
             * So that's reasonable code - how does it do?
-            * JVM has had years of tuning so that's not surprising
+            * Want to grind the dirty Java code into the dust - how can we do better?
           </aside>
         </section>
 
         <section>
-          <h2>Readable profiling results</h2>
+          <h2>Aside: readable profiling</h2>
+          <p>We want readable yet representative profiling results.</p>
           <ul>
-            <li>debug builds (<code>cargo build</code>) are not optimised</li>
-            <li>release builds (<code>cargo build --release</code>) have no debug info</li>
+            <li>debug builds are not optimised</li>
+            <li>release builds (<code>--release</code>) have no debug info</li>
             <li>solution: add debug info to release builds</li>
           </ul>
           <pre><code data-trim>
@@ -342,6 +343,7 @@ debug = true
           </code></pre>
           <aside class="notes">
             - I think including debug info could affect profiling, but that's a risk I have to take
+            - On to actual profiling!
           </aside>
         </section>
 
@@ -472,11 +474,11 @@ pub fn find_seam(&amp;mut self, width: usize, height: usize) -> Vec&lt;usize&gt;
             </code></pre>
 
             <aside class="notes">
-              - 1600 ms -> 1150 ms (30% faster)
               - Allocate 2 fixed-size arrays on the stack
               - Return a reference to them
               - Rust is clever enough to avoid complaining about un-initialised variables
               - Rest of the code doesn't need to change
+              - 1600 ms -> 1150 ms (30% faster)
             </aside>
           </section>
 
@@ -586,13 +588,15 @@ $ perf report
               - we've added an inner loop
               - and unrolled some of the inner loop so we have no ifs there either
               - we can use a similar trick for energy calculation
-              - 1.2 seconds to 0.5 seconds - 60% faster!
+              - 1.2 seconds to 0.45 seconds - 60% faster!
             </aside>
           </section>
         </section>
 
         <section>
           <h2>Ideas for more speed?</h2>
+
+          <p>What else could we do?</p>
 
           <ul>
             <li>Indexing is still slow - cache & use windows when iterating?</li>
@@ -625,7 +629,7 @@ unsafe {
 }
           </code></pre>
 
-          <p>Unsafety everywhere takes us from 450 ms to 300 ms</p>
+          <p>Unsafety everywhere takes us from ~450 ms to ~300 ms</p>
           <p>Useful: quantifies cost of bounds checking</p>
 
           <aside class="notes">
@@ -640,7 +644,8 @@ unsafe {
           <h2>Recap of gains</h2>
 
           <pre>
-    Basic version                                     1.65 s ||||||||||||||||
+    Best Java version                                ~2.00 s ||||||||||||||||||||
+    Basic Rust version                                1.65 s ||||||||||||||||
     Avoid per pixel heap allocations                  1.25 s ||||||||||||
     Use closure rather than stack allocated array     1.22 s ||||||||||||
     Cache modulo when finding edges of image           .90 s |||||||||
